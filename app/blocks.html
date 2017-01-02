@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.rawgit.com/konvajs/konva/0.15.0/konva.js"></script>
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/mathjs/3.2.1/math.js"></script>
+    <script type="text/javascript" src="geometry.js"></script>
+    <meta charset="utf-8">
+    <title>Konva Rect Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #F0F0F0;
+        }
+    </style>
+</head>
+<body>
+<div id="container"></div>
+<script>
+
+    var selected;
+    var lastx ;
+    var lasty ;
+    var globalEvent;
+    var globalConnectors = new Array();
+    var connections = new Array();
+
+    var menuImageSources = ["img/resize.png", "img/resize.png", "img/resize.png"]
+    var menuImages = [];
+
+
+    function showMenu(mx,my) {
+        for(s in menuImages) {
+            var image = menuImages[s];
+            image.setAttrs({x:mx, y:my, visible: true});
+            image.draw();
+        }
+    }
+
+    function hideMenu() {
+        for(s in menuImages) {
+            var image = menuImages[s];
+            image.setAttrs({visible: false});
+        }
+        layer.draw();
+    }
+
+    function distance(x1,y1,x2,y2) {
+        return Math.sqrt((x2 -= x1) * x2 + (y2 -= y1) * y2);
+    }
+
+    function distance(circle1, x2,y2) {
+        var x1 = circle1.getAbsolutePosition().x;
+        var y1 = circle1.getAbsolutePosition().y;
+
+
+        console.log(x1,y1,x2,y2);
+
+        return Math.sqrt((x2 -= x1) * x2 + (y2 -= y1) * y2);
+    }
+
+    var makeConnectionLine = new Konva.Line({
+        x: 0,
+        y: 0,
+        points: [0,0, 0, 0],
+        fill: '#666',
+        stroke: '#666',
+        strokeWidth: 2,
+        visible: false,
+        opacity: 0.8
+    });
+
+
+    function findConnector(current, x,y) {
+
+        for( i=0; i< globalConnectors.length; i++) {
+
+            if(globalConnectors[i]==current) {
+                console.log("current");
+                continue;
+            }
+
+            var cx = globalConnectors[i].getAbsolutePosition().x;
+            var cy = globalConnectors[i].getAbsolutePosition().y;
+
+            //console.log(cx,cy);
+        }
+    }
+
+
+    function findOnRectPoint(nx, ny, arect, aline) {
+
+        var w = arect.getAttr("width");
+        var h = arect.getAttr("height");
+
+        var rx = arect.getAttr("x");
+        var ry = arect.getAttr("y");
+
+        var centerX = rx + w/2;
+        var centerY = ry + h/2;
+
+        var rect = g.Rect(rx, ry, w, h);
+
+        var Xa = centerX;
+        var Ya = centerY;
+        var Xb = nx;
+        var Yb = ny;
+
+        var AB = math.sqrt((Xb - Xa)*(Xb - Xa) + (Yb - Ya)*(Yb - Ya));
+        var AC = math.max(w,h)*2;
+
+        Xc = Xa + (AC * (Xb - Xa) / AB);
+        Yc = Ya + (AC * (Yb - Ya) / AB);
+
+        //aline.setAttrs({x: 0, y: 0, points:[centerX,centerY,Xc,Yc]});
+        //aline.draw();
+
+        var ip = rect.intersectionWithLineFromCenterToPoint(new g.Point(Xc,Yc));
+
+        return {
+            x: ip.x,
+            y: ip.y
+        }
+    }
+
+    function createRect(x, y, w, h, layer) {
+
+        var group = new Konva.Group({
+            draggable: true
+        });
+
+        var rect = new Konva.Rect({
+            x: 0,
+            y: 0,
+            width: w,
+            height: h,
+            fill: '#00D2FF',
+            stroke: '#666',
+            strokeWidth: 2.5,
+            draggable: false
+        });
+
+        group.add(rect);
+
+
+        var complexText = new Konva.Text({
+            x: 0,
+            y: 0,
+            text: 'COMPLEX TEXT\nAll the world\'s a stage, and all the men and women merely players. They have their exits and their entrances.',
+            fontSize: 18,
+            fontFamily: 'Calibri',
+            fill: '#555',
+            width: w,
+            height: h,
+            padding: 5,
+            align: 'center',
+            listening: false
+        });
+
+        group.add(complexText);
+
+        rect.on('dblclick', function(evt) {
+
+            // compensate onclick changes
+            hideMenu();
+            rect.setAttr("fill",'#00D2FF');
+
+            var ax = rect.getAbsolutePosition().x;
+            var ay = rect.getAbsolutePosition().y;
+
+            var points = findOnRectPoint(evt.evt.x -ax, evt.evt.y-ay, rect);
+
+            var pointer = new Konva.Circle({
+                x: 0,
+                y: 0,
+                stroke: '#666',
+                fill: '#ddd',
+                strokeWidth: 2,
+                radius: 10,
+                draggable: true,
+                visible: false
+            });
+
+            if(!rect.connectors) {
+                rect.connectors = new Array();
+            }
+
+            rect.connectors.push(pointer);
+
+            pointer.on('mousedown', function(evt) {
+                lastx =  pointer.getAttr("x");
+                lasty =  pointer.getAttr("y");
+                globalEvent = evt.evt;
+            });
+
+            pointer.on('click', function(evt) {
+
+                if(selected) {
+                    selected.deselect();
+                }
+                selected = pointer;
+
+                pointer.setAttr("fill",'#D200FF');
+                layer.draw();
+
+                globalEvent = evt.evt;
+                evt.cancelBubble = true;
+            });
+
+            pointer.on('dragmove', function(evt) {
+
+                var ax = rect.getAbsolutePosition().x;
+                var ay = rect.getAbsolutePosition().y;
+
+                var points = findOnRectPoint(evt.evt.x -ax, evt.evt.y-ay, rect);
+
+                pointer.setAttr("x", points.x);
+                pointer.setAttr("y", points.y);
+
+                ax = evt.evt.x ;
+                ay = evt.evt.y ;
+
+                makeConnectionLine.show();
+                makeConnectionLine.setAttrs({points:[pointer.getAbsolutePosition().x,pointer.getAbsolutePosition().y,ax,ay]});
+                makeConnectionLine.draw();
+
+                findConnector();
+
+            });
+
+            pointer.on('dragend', function(evt) {
+                var ax = evt.evt.x ;
+                var ay = evt.evt.y ;
+                makeConnectionLine.hide();
+                for(i = 0; i<globalConnectors.length; i++) {
+                    var circle = globalConnectors[i];
+                    if(circle==pointer) {
+                        continue;
+                    }
+                    var dist = distance(circle, ax, ay);
+
+                    if(dist < 10) {
+                        pointer.connectedFrom = circle;
+                        circle.connectedTo = pointer;
+                        pointer.connector = new Konva.Line({
+                            x: 0,
+                            y: 0,
+                            points: [pointer.getAbsolutePosition().x,pointer.getAbsolutePosition().y,
+                                circle.getAbsolutePosition().x,circle.getAbsolutePosition().y],
+                            fill: '#666',
+                            stroke: '#666',
+                            strokeWidth: 2,
+                            visible: true,
+                            opacity: 0.8
+                        });
+                        circle.connector = pointer.connector;
+                        layer.add(pointer.connector);
+                        break;
+                    }
+
+                    console.log(dist);
+                }
+                layer.draw();
+            });
+
+            pointer.on("mouseenter", function(evt) {
+                console.log("mouseover");
+            });
+
+            pointer.deselect = function() {
+                pointer.setAttr("fill",'#ddd');
+                layer.draw();
+            }
+
+            pointer.setAttrs({x: points.x, y: points.y, 'visible':true});
+            //pointer.draw();
+
+            //clickline.setAttrs({points:[0,0, evt.evt.x, evt.evt.y]});
+            //clickline.draw();
+
+            group.add(pointer);
+
+            globalConnectors.push(pointer);
+
+
+            layer.add(group);
+
+            layer.draw();
+
+        });
+
+        rect.on('click', function(evt) {
+
+            if(selected) {
+                selected.deselect();
+            }
+            selected = rect;
+
+            rect.setAttr("fill",'#D200FF');
+            layer.draw();
+
+            globalEvent = evt.evt;
+            evt.cancelBubble = true;
+
+            showMenu(rect.getAbsolutePosition().x + rect.getAttr("width") + 2, rect.getAbsolutePosition().y - 40);
+        });
+
+        rect.deselect = function() {
+            hideMenu();
+            rect.setAttr("fill",'#00D2FF');
+            layer.draw();
+        };
+
+
+        //group.add(pointer);
+        //group.add(clickline);
+
+        rect.connectors = new Array();
+
+        //arrow.cache();
+        //rrow.filters([Konva.Filters.Blur]);
+        //layer.add(arrow);
+
+        //layer.add(pointer);
+
+        layer.add(group);
+
+        group.on('dragstart', function(evt) {
+            hideMenu();
+        });
+
+        group.on('dragmove', function(evt) {
+            console.log("drag rect");
+            // Make all connection consistent.
+            for(i=0;i < rect.connectors.length; i++) {
+
+                var c1,c2, connector;
+
+                if(rect.connectors[i].connectedFrom) {
+                    c1 = rect.connectors[i].connectedFrom;
+                    c2 = rect.connectors[i];
+                    connector = c2.connector;
+                }
+
+                if(rect.connectors[i].connectedTo) {
+                    c1 = rect.connectors[i];
+                    c2 = rect.connectors[i].connectedTo;
+                    connector = c1.connector;
+                }
+
+                if(c1 && c2 && connector) {
+                    connector.setAttrs({points:[c1.getAbsolutePosition().x, c1.getAbsolutePosition().y,
+                        c2.getAbsolutePosition().x, c2.getAbsolutePosition().y]});
+
+                }
+
+                console.log(rect.connectors[i]);
+            }
+            layer.draw();
+        });
+
+
+        return group;
+
+    }
+
+
+
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+
+    Konva.dragDistance = 8;
+
+    var stage = new Konva.Stage({
+        container: 'container',
+        width: width,
+        height: height
+    });
+
+
+    stage.getContent().addEventListener('click', function(evt, i) {
+        if(globalEvent === null) {
+            // nothing is clicked
+            console.log("Free selection!");
+
+            if (selected) {
+                selected.deselect();
+                selected = null;
+
+                hideMenu();
+            }
+        } else {
+
+        }
+
+        globalEvent = null;
+    });
+
+
+    var layer = new Konva.Layer();
+
+    layer.on('click', function(evt){
+        console.log("STAGE CLICK");
+    });
+
+
+
+    layer.add(makeConnectionLine);
+
+    var img;
+
+    Konva.Image.fromURL("img/plus.png", function(image) {
+        // make it draggable
+        image.setAttrs({
+            draggable: false,
+            x: 20,
+            y: 20
+        });
+
+        image.on('click', function(evt) {
+            var r2 = createRect(420,20, 150,100, layer);
+            layer.draw();
+        });
+
+        // append to layer
+        layer.add(image);
+        // update layer
+        layer.draw();
+    });
+
+    Konva.Image.fromURL("img/error.png", function(image) {
+        // make it draggable
+        image.setAttrs({
+            draggable: false,
+            x: 20,
+            y: 60
+        });
+
+        image.on('click', function(evt) {
+
+        });
+
+        // append to layer
+        layer.add(image);
+        // update layer
+        layer.draw();
+    });
+
+
+
+
+
+    for(s in menuImageSources) {
+
+        Konva.Image.fromURL(menuImageSources[s], function(image) {
+            // make it draggable
+            image.setAttrs({
+                draggable: false,
+                x: 0,
+                y: 0,
+                width: 40,
+                height: 40,
+                visible: false
+            });
+
+            menuImages.push(image);
+            layer.add(image);
+            layer.draw();
+
+        });
+    }
+
+
+
+
+
+
+
+
+
+    //setupArrow(r2.findOne(".left"), r1.findOne(".right"), arrow);
+
+    //var c1 = r1.findOne(".right").connectFrom = r2.findOne(".left");
+    //var c2 = r2.findOne(".left").connectTo = r1.findOne(".right");
+
+    //r1.findOne(".right").connector = arrow;
+    //r2.findOne(".left").connector = arrow;
+
+
+    //layer.add(createRect(420,20, 150,100));
+
+
+    // add the layer to the stage
+    stage.add(layer);
+
+</script>
+
+</body>
+</html>
