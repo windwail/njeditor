@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.rawgit.com/konvajs/konva/1.2.2/konva.min.js"></script>
+    <meta charset="utf-8">
+    <title>Konva Drag and Drop Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #F0F0F0;
+        }
+    </style>
+</head>
+<body>
+<div id="container"></div>
+<script>
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+
+    var stage = new Konva.Stage({
+        container: 'container',
+        width: width,
+        height: height
+    });
+
+    var layer = new Konva.Layer();
+    var rectX = 100;
+    var rectY = 100;
+
+    var container = new Konva.Rect({
+        x: 0,
+        y: 0,
+        width: 150,
+        height: 400,
+        fill: 'gray',
+        stroke: 'black',
+        strokeWidth: 1,
+        draggable: false,
+        cornerRadius: 5,
+    });
+
+
+    var box = new Konva.Rect({
+        x: container.getWidth() - 6,
+        y: 0,
+        width: 12,
+        height: 60,
+        fill: '#00D2FF',
+        stroke: 'black',
+        strokeWidth: 1,
+        draggable: true,
+        cornerRadius: 5,
+        dragBoundFunc: function (pos) {
+            //console.log(pos.y + ":" + container.getAbsolutePosition().y);
+
+            var y = pos.y;
+            // scroller upper than container.
+            if (y <= container.getAbsolutePosition().y) {
+                y = container.getAbsolutePosition().y;
+            }
+
+            var lowest_point = container.getAbsolutePosition().y + container.getHeight() - box.getHeight();
+
+            if (y >= lowest_point) {
+                y = lowest_point;
+            }
+
+            return {
+                x: this.getAbsolutePosition().x,
+                y: y
+            }
+        }
+    });
+
+    box.on('dragmove', function(evt) {
+        var k = box.getAttr('y')/ (container.getHeight() - box.getHeight());
+        var way = container.getHeight() - subgroup.getClientRect().height - 25;
+        var delta = way * k ;
+        subgroup.setAttr('y', delta);
+        subgroup.clip({
+            x : 0,
+            y : -delta,
+            width : container.getWidth(),
+            height : container.getHeight()
+        })
+    })
+
+    var subgroup = new Konva.Group({
+        x: 0,
+        y: 0,
+        draggable: false,
+        clip: {
+            x : 0,
+            y : 0,
+            width : container.getWidth(),
+            height : container.getHeight()
+        },
+    });
+
+    var group = new Konva.Group({
+        x: 50,
+        y: 50,
+        draggable: true
+    });
+
+    group.add(container);
+    group.add(box);
+
+    var circles = [];
+    for (var i = 0; i < 30; i++) {
+
+        var x = container.getWidth() / 2;
+        var y = i * 90 + 50;
+
+        var creature = new Konva.Rect({
+            x: 0,
+            y: 0,
+            width: 80,
+            height: 80,
+            fill: '#00D2FF',
+            stroke: 'black',
+            strokeWidth: 1,
+            draggable: true,
+            cornerRadius: 5,
+        });
+
+        circles[i] = new Konva.Circle({
+                    x: x,
+                    y: y,
+                    radius: 40,
+                    fill: 'red',
+                    stroke: 'black',
+                    strokeWidth: 1,
+                    draggable: true,
+                    dragDistance: 1
+                });
+
+        circles[i].creature = creature;
+
+        circles[i].on('mousedown touchstart', function(evt) {
+            evt.target.dragstartpos = evt.target.getAbsolutePosition();
+            console.log(evt.target.dragstartpos);
+        });
+
+        circles[i].on('dragstart', function(evt) {
+
+            console.log(evt.evt.x);
+
+            evt.target.creature.setAbsolutePosition({
+                x:evt.evt.x - evt.target.creature.getWidth()/2,
+                y:evt.evt.y - evt.target.creature.getHeight()/2});
+
+            layer.add(evt.target.creature);
+
+            // prevent from moving
+            evt.target.setAbsolutePosition(evt.target.dragstartpos);
+        });
+
+        circles[i].on('dragmove', function(evt) {
+            evt.target.setAbsolutePosition(evt.target.dragstartpos);
+            evt.target.creature.setAbsolutePosition({
+                x:evt.evt.x - evt.target.creature.getWidth()/2,
+                y:evt.evt.y - evt.target.creature.getHeight()/2});
+        });
+
+        subgroup.add(circles[i]);
+    }
+
+    group.add(subgroup);
+
+
+    // add cursor styling
+    box.on('mouseover', function () {
+        document.body.style.cursor = 'pointer';
+    });
+    box.on('mouseout', function () {
+        document.body.style.cursor = 'default';
+    });
+
+    box.on('dragmove', function(evt) {
+
+    });
+
+    layer.add(group);
+    stage.add(layer);
+</script>
+
+</body>
+</html>
