@@ -11,18 +11,52 @@
             overflow: hidden;
             background-color: #F0F0F0;
         }
+
+        #container {
+            float: left;
+        }
+        #nav {
+            width: 100%;
+            height: 30px;
+            background: #03a9f4
+        }
+        #props {
+            position: fixed;
+            top: 0px;
+            right: 0px;
+            bottom: 0px;
+            width: 300px;
+            background: #03a9f4;
+        }
     </style>
 </head>
 <body>
+<div id="nav">Navigation and so on</div>
 <div id="container"></div>
+<div id="props"></div>
 <script>
     var width = window.innerWidth;
     var height = window.innerHeight;
 
+    var indigo = '#3f51b5';
+    var blue = '#2196f3'
+    var lightBlue = '#03a9f4';
+    var cyan = '#03a9f4';
+    var teal = '#009688';
+
+
+    //document.getElementById('container').style.background = indigo;
+
     var stage = new Konva.Stage({
         container: 'container',
         width: width,
-        height: height
+        height: height,
+    });
+
+    window.addEventListener('resize', function(event){
+        stage.setWidth(window.innerWidth);
+        stage.setHeight(window.innerHeight);
+        document.getElementById('props').style.height = window.innerHeight;
     });
 
     var layer = new Konva.Layer();
@@ -47,7 +81,7 @@
         y: 0,
         width: 12,
         height: 60,
-        fill: '#00D2FF',
+        fill: '#a7dbd8',
         stroke: 'black',
         strokeWidth: 1,
         draggable: true,
@@ -76,7 +110,7 @@
 
     box.on('dragmove', function(evt) {
         var k = box.getAttr('y')/ (container.getHeight() - box.getHeight());
-        var way = container.getHeight() - subgroup.getClientRect().height - 25;
+        var way = container.getHeight() - subgroup.getClientRect().height - 20;
         var delta = way * k ;
         subgroup.setAttr('y', delta);
         subgroup.clip({
@@ -109,7 +143,7 @@
     group.add(box);
 
     var circles = [];
-    for (var i = 0; i < 30; i++) {
+    for (var i = 0; i < 23; i++) {
 
         var x = container.getWidth() / 2;
         var y = i * 90 + 50;
