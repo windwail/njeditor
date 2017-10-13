@@ -8,3 +8,12 @@ tmp
 ## Directory-based project format:
 .idea/
 jspm_packages/
+
+.DS_STORE
+node_modules
+build
+dist
+.module-cache
+*.log*
+_nogit
+todo.md
